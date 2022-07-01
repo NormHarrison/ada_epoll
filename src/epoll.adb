@@ -32,13 +32,31 @@ package body Epoll is
      (Epoll         : in out Epoll_Type,
       Close_On_Exec : in     Boolean := False)
    is
+      EPOLL_CLOEXEC : constant Integer := 02000000;
+
       function Epoll_Create1 (Flags : in C.int) return C.int with
         Import     => True,
         Convention => C,
         Link_Name  => "epoll_create1";
 
    begin
-      null;
+      if Epoll.Descriptor /= -1 then
+         Close (Epoll);
+      end if;
+
+      Epoll.Descriptor := Epoll_Create1
+        ((if Close_On_Exec then EPOLL_CLOEXEC else 0));
+
+      pragma Assert (Epoll.Descriptor /= -1);
+
+      GNAT.Sockets.Create_Socket_Pair
+        (Left   => Epoll.Read_Sock,
+         Right  => Epoll.Left_Sock,
+         Family => GNAT.Sockets.Family_Unix,
+         Mode   => GNAT.Sockets.Socket_Raw);
+      --  ! Catch exception and turn into our custom epoll-related one?
+
+      
    end Create;
 
    -------------
@@ -100,7 +118,8 @@ package body Epoll is
 
          --  ! Reset file descriptors to their defaults?
 
-         Epoll.Interest_Count := 0;
+         Epoll.Interest_Count :=  0;
+         Epoll.Descriptor     := -1;
       end if;
    end Close;
 
