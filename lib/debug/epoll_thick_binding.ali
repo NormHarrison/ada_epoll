@@ -1,0 +1,75 @@
+V "GNAT Lib v8"
+A -gnatA
+A -gnat2012
+A -gnatwa
+A -gnatwe
+A -gnato
+A -gnatVa
+A -g
+A -gnateE
+A -mtune=generic
+A -march=x86-64
+P ZX
+
+RN
+RV NO_IMPLICIT_CONDITIONALS
+RV NO_STANDARD_STORAGE_POOLS
+RV NO_IMPLEMENTATION_PRAGMAS
+RV SPARK_05
+
+U epoll_thick_binding%s	epoll_thick_binding.ads	6218d14c NE OO PK
+W interfaces%s		interfac.ads		interfac.ali
+W interfaces.c%s	i-c.adb			i-c.ali
+W interfaces.c.extensions%s  i-cexten.ads	i-cexten.ali
+
+D ada.ads		20170911084841 76789da1 ada%s
+D a-unccon.ads		20170908151217 0e9b276f ada.unchecked_conversion%s
+D epoll_thick_binding.ads  20220630073944 5c5a0c0f epoll_thick_binding%s
+D interfac.ads		20180111085525 5ab55268 interfaces%s
+D i-c.ads		20170908151217 5421119b interfaces.c%s
+D i-cexten.ads		20180228143102 6a63ccd8 interfaces.c.extensions%s
+D system.ads		20180111085525 4635ec04 system%s
+D s-exctab.ads		20180111085525 54135002 system.exception_table%s
+D s-parame.ads		20180111085525 f896c45c system.parameters%s
+D s-stalib.ads		20180111085525 09bd3940 system.standard_library%s
+X 3 epoll_thick_binding.ads
+5K9*Epoll_Thick_Binding 53l5 53e24
+7K12*C=7:33 10r39 10r53 34r18 35r18 36r18 37r52 44r22 46r22 47r22 47r36
+8K12*CE=8:36 20r26 27r16
+10V13*Epoll_Create1{5|35I9} 10>28
+10i28 Flags{5|35I9}
+15E9*Epoll_Event_Data_Kind 15e57 17r39 26r41
+15n35*EEDK_Pointer{15E9} 19r15
+15n49*EEDK_FD{15E9} 21r15
+17R9*Union_Epoll_Data 17d27 24e14 28r16
+17e27*Data_Kind{15E9} 18r12
+20m13*Pointer{6|43M12}
+22i13*Descriptor{integer}
+26R9*Struct_Epoll_Event 26d29 29e14 31r49
+26e29*Data_Kind{15E9} 28r34
+27m7*Events{6|179M9}
+28r7*Data{17R9}
+31P9*Struct_Epoll_Event_Access(26R9) 37r18 45r22
+33V13*Epoll_Ctl{5|35I9} 34>7 35>7 36>7 37>7
+34i7 EpFd{5|35I9}
+35i7 Op{5|35I9}
+36i7 Fd{5|35I9}
+37p7 Event{31P9}
+43V13*Epoll_Wait{5|35I9} 44>7 45>7 46>7 47>7
+44i7 EpFd{5|35I9}
+45p7 Events{31P9}
+46i7 MaxEvents{5|35I9}
+47i7 Timeout{5|35I9}
+X 4 interfac.ads
+38K9*Interfaces 3|1r6 2r6 7r22 8r23 4|184e15
+X 5 i-c.ads
+18K20*C 3|1w17 2r17 7r33 8r34 5|230e17
+35I9*int<integer> 3|10r41 10r55 34r20 35r20 36r20 37r54 44r24 46r24 47r24
+. 47r38
+X 6 i-cexten.ads
+37K22*Extensions 3|2w19 8r36 6|467e28
+43M12*void_ptr{7|67M9} 3|20r29
+179M9*Unsigned_32 3|27r19
+X 7 system.ads
+67M9*Address
+

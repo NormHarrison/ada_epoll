@@ -1,0 +1,37 @@
+with "../../epoll_thick_binding.gpr";
+
+
+project Epoll_Example is
+
+   type Build_Kind is ("release", "debug");
+   Build : Build_Kind := External ("BUILD_KIND", "debug");
+
+   for Create_Missing_Dirs use "true";
+
+   for Source_Dirs use ("src");
+   for Object_Dir use "obj";
+   for Exec_Dir use "bin";
+
+   for Main use ("epoll_example");
+
+   Common_Compiler_Switches :=
+     ("-gnat2012",
+      "-gnato",   --  Enable overflow checks.
+      "-gnatVa"); --  Enable almost all validity (style) checks.
+
+   package Compiler is
+      case Build is
+         when "release" =>
+            for Default_Switches ("Ada") use Common_Compiler_Switches
+             & ("-gnatwae");
+         when "debug"   =>
+            for Default_Switches ("Ada") use Common_Compiler_Switches
+              & ("-g", "-gnateE");
+      end case;
+   end Compiler;
+
+   package Binder is
+      for Default_Switches ("Ada") use ("-E");
+   end Binder;
+
+end Epoll_Example;
