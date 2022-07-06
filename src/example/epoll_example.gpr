@@ -16,14 +16,14 @@ project Epoll_Example is
 
    Common_Compiler_Switches :=
      ("-gnat2012",
+      "-gnatwae", --  Warnings as errors.
       "-gnato",   --  Enable overflow checks.
       "-gnatVa"); --  Enable almost all validity (style) checks.
 
    package Compiler is
       case Build is
          when "release" =>
-            for Default_Switches ("Ada") use Common_Compiler_Switches
-             & ("-gnatwae");
+            for Default_Switches ("Ada") use Common_Compiler_Switches;
          when "debug"   =>
             for Default_Switches ("Ada") use Common_Compiler_Switches
               & ("-g", "-gnateE");

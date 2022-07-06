@@ -31,5 +31,5 @@ library project Epoll_Thick_Binding is
    package Binder is
       for Default_Switches ("Ada") use ("-E");
    end Binder;
-   
+
 end Epoll_Thick_Binding;

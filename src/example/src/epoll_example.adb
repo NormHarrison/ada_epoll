@@ -1,23 +1,43 @@
-with Ada.Text_IO; use ada.Text_IO;
-
-with System;
-
-with Interfaces.C;
+with Ada.Text_IO;          use ada.Text_IO;
+with Ada.Exceptions;
+with Ada.Task_Identification;
 
 with Epoll;
 
 
 procedure Epoll_Example is
 
-   use type Interfaces.C.int;
+   use type Epoll.Event_Kind_Type;
 
-   package C renames Interfaces.C;
+   Standard_In : constant Integer := 1;
 
-   Standard_In : constant C.int := 1;
+   -------------------
+   -- Abortion_Task --
+   -------------------
 
-   Max_Events : constant C.int := 10;
+   task Abortion_Task is
+      entry Start (Epoll_Acc : in Epoll.Epoll_Access);
+   end Abortion_Task;
 
-   Epoll_FD : constant C.int := Epoll.Epoll_Create1 (Flags => 0);
+   task body Abortion_Task is
+      Ep : Epoll.Epoll_Access;
+
+   begin
+      accept Start (Epoll_Acc : in Epoll.Epoll_Access) do
+         Ep := Epoll_Acc;
+      end Start;
+
+      Forever : loop
+         Put_Line ("Aborting call to `Wait` in 5 seconds...");
+         delay 5.0;
+         Epoll.Abort_Wait (Ep.all);
+      end loop Forever;
+
+   exception
+      when Error : others =>
+        Put_Line (Ada.Exceptions.Exception_Information (Error));
+        Ada.Task_Identification.Abort_Task (Ada.Task_Identification.Environment_Task);
+   end Abortion_Task;
 
    --------------------------
    --  Consume_Standard_In --
@@ -29,50 +49,55 @@ procedure Epoll_Example is
       Put_Line ("You entered: """ & User_Input & """");
    end Consume_Standard_In;
 
-   Event : Epoll.Struct_Epoll_Event :=
-     (Events => Epoll.Event_Kind_Values (Epoll.EK_Read),
-      Data   => Integer (Standard_In));
-
-   Events : array (1 .. Max_Events) of Epoll.Struct_Epoll_Event;
-
-   Ready_Count : C.int;
+   Ep : Epoll.Epoll_Type;
 
 begin
-   if Epoll_FD = -1 then
-      Put_Line ("Failed to create epoll instance.");
-      return;
-   end if;
+   Epoll.Create (Ep, Close_On_Exec => True);
 
-   Put_Line ("Adding the file descriptor"
-     & Integer'Image (Event.Data)
-     & " to watch list.");
+   Epoll.Control
+     (Epoll      => Ep,
+      Operation  => Epoll.Add,
+      Descriptor => Standard_In,
+      Event_Mask => Epoll.EK_Read + EPoll.EK_Error + Epoll.EK_Closed,
+      Meta_Data  => Standard_In);
 
-   if Epoll.Epoll_Ctl
-     (EpFd  => Epoll_FD,
-      Op    => Epoll.Add'Enum_Rep,
-      Fd    => Standard_In,
-      Event => Event'Address) = -1
-   then
-      Put_line ("Failed to add descriptor to epoll instance.");
-      return;
-   end if;
+   Abortion_Task.Start (Epoll_Acc => Ep'Unrestricted_Access);
 
    Forever : loop
-      Ready_Count := Epoll.Epoll_Wait (Epoll_FD, Events'Address, 10, 1000);
-      exit when Ready_Count = -1;
-      Put_Line (C.int'Image (Ready_Count) & " event(s) ready.");
+      Put_Line ("Waiting for events...");
 
-      for Index in Events'First .. Ready_Count loop
-         Put_Line ("Structure contained descriptor"
-           & Integer'Image (Events (Index).Data));
+      declare
+         Events : constant Epoll.Event_Array := Epoll.Wait
+           (Ep, Timeout => Epoll.Forever);
 
-         if Events (Index).Data = Integer (Standard_In) then
-            Consume_Standard_In;
-            Put_Line ("Consumed standard input.");
-         end if;
-      end loop;
+         Event_Mask : Epoll.Event_Kind_Type;
 
+      begin
+         Put_Line (Integer'Image (Events'Length) & " event(s) ready.");
+
+         for Index in Events'Range loop
+            Put_Line ("Structure contained descriptor"
+              & Integer'Image (Epoll.Get_Meta_Data (Events (Index))));
+
+             Event_Mask := Epoll.Get_Event_Mask (Events (Index));
+
+            if Epoll.Get_Meta_Data  (Events (Index)) = Standard_In and then
+               Epoll.Get_Event_Mask (Events (Index)) & Epoll.EK_Read
+            then
+               Consume_Standard_In;
+               Put_Line ("Consumed standard input.");
+            end if;
+         end loop;
+
+      end;
    end loop Forever;
 
-   Put_Line ("Failed to wait for events on epoll instance.");
+   Epoll.Close (Ep);
+
+exception
+   when Error : others =>
+     Put_Line (Ada.Exceptions.Exception_Information (Error));
+     Epoll.Close (Ep);
+     Ada.Task_Identification.Abort_Task (Ada.Task_Identification.Environment_Task);
+
 end Epoll_Example;
