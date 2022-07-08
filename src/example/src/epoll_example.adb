@@ -1,6 +1,5 @@
-with Ada.Text_IO;          use ada.Text_IO;
+with Ada.Text_IO;    use ada.Text_IO;
 with Ada.Exceptions;
-with Ada.Task_Identification;
 
 with Epoll;
 
@@ -36,7 +35,6 @@ procedure Epoll_Example is
    exception
       when Error : others =>
         Put_Line (Ada.Exceptions.Exception_Information (Error));
-        Ada.Task_Identification.Abort_Task (Ada.Task_Identification.Environment_Task);
    end Abortion_Task;
 
    --------------------------
@@ -54,9 +52,8 @@ procedure Epoll_Example is
 begin
    Epoll.Create (Ep, Close_On_Exec => True);
 
-   Epoll.Control
+   Epoll.Add
      (Epoll      => Ep,
-      Operation  => Epoll.Add,
       Descriptor => Standard_In,
       Event_Mask => Epoll.EK_Read + EPoll.EK_Error + Epoll.EK_Closed,
       Meta_Data  => Standard_In);
@@ -70,16 +67,12 @@ begin
          Events : constant Epoll.Event_Array := Epoll.Wait
            (Ep, Timeout => Epoll.Forever);
 
-         Event_Mask : Epoll.Event_Kind_Type;
-
       begin
          Put_Line (Integer'Image (Events'Length) & " event(s) ready.");
 
          for Index in Events'Range loop
             Put_Line ("Structure contained descriptor"
               & Integer'Image (Epoll.Get_Meta_Data (Events (Index))));
-
-             Event_Mask := Epoll.Get_Event_Mask (Events (Index));
 
             if Epoll.Get_Meta_Data  (Events (Index)) = Standard_In and then
                Epoll.Get_Event_Mask (Events (Index)) & Epoll.EK_Read
@@ -92,12 +85,9 @@ begin
       end;
    end loop Forever;
 
-   Epoll.Close (Ep);
-
 exception
    when Error : others =>
      Put_Line (Ada.Exceptions.Exception_Information (Error));
      Epoll.Close (Ep);
-     Ada.Task_Identification.Abort_Task (Ada.Task_Identification.Environment_Task);
 
 end Epoll_Example;

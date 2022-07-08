@@ -23,6 +23,7 @@ package Epoll is
    function "+" (Left, Right : in Event_Kind_Type) return Event_Kind_Type;
    function "&" (Left, Right : in Event_Kind_Type) return Boolean;
 
+   EK_None           : constant Event_Kind_Type; --  Only implicit events.
    EK_Read           : constant Event_Kind_Type; --  EPOLLIN
    EK_Exceptional    : constant Event_Kind_Type; --  EPOLLPRI
    EK_Write          : constant Event_Kind_Type; --  EPOLLOUT
@@ -40,17 +41,22 @@ package Epoll is
    EK_Edge_Triggered : constant Event_Kind_Type; --  EPOLLET
 
 
-   type Operation_Kind is (Add, Delete, Modify);
-
    subtype Meta_Data_Range is Integer range Integer'First + 1 .. Integer'Last;
    --  ! Make a `new` type instead?
 
-   procedure Control
+   procedure Add
      (Epoll      : in out Epoll_Type;
-      Operation  : in     Operation_Kind;
       Descriptor : in     Integer;
       Event_Mask : in     Event_Kind_Type;
-      Meta_Data  : in     Meta_Data_Range) with Inline;
+      Meta_Data  : in     Meta_Data_Range);
+
+   procedure Delete (Epoll : in out Epoll_Type; Descriptor : in Integer);
+
+   procedure Modify
+     (Epoll      : in Epoll_Type;
+      Descriptor : in Integer;
+      Event_Mask : in Event_Kind_Type;
+      Meta_Data  : in Meta_Data_Range);
 
 
    type Event_Type is private;
@@ -106,6 +112,7 @@ private
 
    type Event_Kind_Type is new Interfaces.Unsigned_32;
 
+   EK_None           : constant Event_Kind_Type := 0;
    EK_Read           : constant Event_Kind_Type := 16#001#;
    EK_Exceptional    : constant Event_Kind_Type := 16#002#;
    EK_Write          : constant Event_Kind_Type := 16#004#;
@@ -121,8 +128,6 @@ private
    EK_No_Suspend     : constant Event_Kind_Type := 16#20000000#;
    EK_One_Shot       : constant Event_Kind_Type := 16#40000000#;
    EK_Edge_Triggered : constant Event_Kind_Type := 16#80000000#;
-
-   for Operation_Kind use (Add => 1, Delete => 2, Modify => 3);
 
    type Event_Type is record
       Event_Mask : Event_Kind_Type; --  `Events`

@@ -7,9 +7,9 @@ with GNAT.OS_Lib;
 
 package body Epoll is
 
-   ----------------------------------------------
-   -- Start of private (body-only) subprograms --
-   ----------------------------------------------
+   -----------------------------------------------
+   -- Start of private (body-only) subprograms. --
+   -----------------------------------------------
 
    ------------------------
    -- Form_Error_Message --
@@ -19,49 +19,19 @@ package body Epoll is
    is (Integer'Image (GNAT.OS_Lib.Errno) & ": "
          & GNAT.OS_Lib.Errno_Message (GNAT.OS_Lib.Errno, "Unknown."));
 
-   ---------------------
-   -- Private_Control --
-   ---------------------
+   -----------------
+   -- C_Epoll_Ctl --
+   -----------------
 
-   procedure Private_Control
-     (Epoll      : in out Epoll_Type;
-      Operation  : in     Operation_Kind;
-      Descriptor : in     Integer;
-      Event_Mask : in     Event_Kind_Type;
-      Meta_Data  : in     Integer)
-   is
-      -----------------
-      -- C_Epoll_Ctl --
-      -----------------
-
-      function C_Epoll_Ctl
-        (EpFd  : in C.int;
-         Op    : in C.int;
-         Fd    : in C.int;
-         Event : in System.Address) return C.int
-      with
-        Import     => True,
-        Convention => C,
-        Link_Name  => "epoll_ctl";
-
-      Event : constant Event_Type := (Event_Mask, Meta_Data);
-
-   begin
-      if C_Epoll_Ctl
-        (EpFd  => Epoll.Descriptor,
-         Op    => Operation'Enum_Rep,
-         Fd    => C.int (Descriptor),
-         Event => Event'Address) = -1
-      then
-         raise Epoll_Error with Form_Error_Message;
-      end if;
-
-      case Operation is
-         when Add    => Epoll.Interest_Count := Epoll.Interest_Count + 1;
-         when Delete => Epoll.Interest_Count := Epoll.Interest_Count - 1;
-         when Modify => null;
-      end case;
-   end Private_Control;
+   function C_Epoll_Ctl
+     (EpFd  : in C.int;
+      Op    : in C.int;
+      Fd    : in C.int;
+      Event : in System.Address) return C.int
+   with
+     Import     => True,
+     Convention => C,
+     Link_Name  => "epoll_ctl";
 
    ----------------------------------
    -- Start of public subprograms. --
@@ -76,6 +46,7 @@ package body Epoll is
       Close_On_Exec : in     Boolean := False)
    is
       EPOLL_CLOEXEC : constant C.int := 8#2000000#;
+      Operation_Add : constant C.int := 1;
 
       ---------------------
       -- C_Epoll_Create1 --
@@ -85,6 +56,8 @@ package body Epoll is
         Import     => True,
         Convention => C,
         Link_Name  => "epoll_create1";
+
+      Event : Event_Type;
 
    begin
       if Epoll.Descriptor /= -1 then
@@ -106,13 +79,18 @@ package body Epoll is
          Level  => GNAT.Sockets.Socket_Level);
       --  ! Catch exception and turn into our custom epoll-related one?
 
-      Private_Control
-        (Epoll      => Epoll,
-         Operation  => Add,
-         Descriptor => GNAT.Sockets.To_C (Epoll.Read_Sock),
-         Event_Mask => EK_Read,
-         Meta_Data  => Read_Sock_Unique_ID);
+      Event := (Event_Mask => EK_Read, Meta_Data => Read_Sock_Unique_ID);
 
+      if C_Epoll_Ctl
+        (EpFd  => Epoll.Descriptor,
+         Op    => Operation_Add,
+         Fd    => C.int (GNAT.Sockets.To_C (Epoll.Read_Sock)),
+         Event => Event'Address) = -1
+      then
+         raise Epoll_Error with Form_Error_Message;
+      end if;
+
+      Epoll.Interest_Count := Epoll.Interest_Count + 1;
    end Create;
 
    ---------
@@ -129,20 +107,73 @@ package body Epoll is
    function "&" (Left, Right : in Event_Kind_Type) return Boolean
    is ((Left and Right) = (Right and Right));
 
-   -------------
-   -- Control --
-   -------------
+   ---------
+   -- Add --
+   ---------
 
-   procedure Control
+   procedure Add
      (Epoll      : in out Epoll_Type;
-      Operation  : in     Operation_Kind;
       Descriptor : in     Integer;
       Event_Mask : in     Event_Kind_Type;
       Meta_Data  : in     Meta_Data_Range)
    is
+      Operation_Add : constant C.int      := 1;
+      Event         : constant Event_Type := (Event_Mask, Meta_Data);
+
    begin
-      Private_Control (Epoll, Operation, Descriptor, Event_Mask, Meta_Data);
-   end Control;
+      if C_Epoll_Ctl
+        (EpFd  => Epoll.Descriptor,
+         Op    => Operation_Add,
+         Fd    => C.Int (Descriptor),
+         Event => Event'Address) = -1
+      then
+         raise Epoll_Error with Form_Error_Message;
+      end if;
+      Epoll.Interest_Count := Epoll.Interest_Count + 1;
+   end Add;
+
+   ------------
+   -- Delete --
+   ------------
+
+   procedure Delete (Epoll : in out Epoll_Type; Descriptor : in Integer) is
+      Operation_Delete : constant C.int := 2;
+
+   begin
+      if C_Epoll_Ctl
+        (EpFd  => Epoll.Descriptor,
+         Op    => Operation_Delete,
+         Fd    => C.Int (Descriptor),
+         Event => System.Null_Address) = -1
+      then
+         raise Epoll_Error with Form_Error_Message;
+      end if;
+      Epoll.Interest_Count := Epoll.Interest_Count - 1;
+   end Delete;
+
+   ------------
+   -- Modify --
+   ------------
+
+   procedure Modify
+     (Epoll      : in Epoll_Type;
+      Descriptor : in Integer;
+      Event_Mask : in Event_Kind_Type;
+      Meta_Data  : in Meta_Data_Range)
+   is
+      Operation_Modify : constant C.int      := 3;
+      Event            : constant Event_Type := (Event_Mask, Meta_Data);
+
+   begin
+      if C_Epoll_Ctl
+        (EpFd  => Epoll.Descriptor,
+         Op    => Operation_Modify,
+         Fd    => C.Int (Descriptor),
+         Event => Event'Address) = -1
+      then
+         raise Epoll_Error with Form_Error_Message;
+      end if;
+   end Modify;
 
    -------------------
    -- Get_Meta_Data --
