@@ -16,7 +16,7 @@ library project Epoll_Thick_Binding is
      ("-gnat2012",
       "-gnatwae",  --  Warnings as errors.
       "-gnato",    --  Enable overflow checks.
-      "-gnatVa"); --  Enable almost all validity (style) checks.
+      "-gnatVa");  --  Enable almost all validity (style) checks.
 
    package Compiler is
       case Build is
